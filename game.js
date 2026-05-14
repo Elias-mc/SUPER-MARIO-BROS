@@ -10,7 +10,7 @@ import { overworldbg } from "./Tilemap/overworldbg.js";
 import { floorOverworld } from "./Tilemap/floor-overworl.js";
 import { blocksOverworld } from "./Tilemap/blocks-overworl.js";
 import { enemies } from "./Component/enemies.js";
-
+//config
 const config = {
   type: Phaser.AUTO,
   width: 256,

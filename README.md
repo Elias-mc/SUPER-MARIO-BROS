@@ -23,9 +23,11 @@
 - [Gameplay](#-gameplay)
 - [Tech Stack](#-tech-stack)
 - [Estructura del proyecto](#-estructura-del-proyecto)
+- [Arquitectura modular](#-arquitectura-modular)
 - [Primeros pasos](#-primeros-pasos)
 - [Controles](#-controles)
 - [Sistema de animaciones](#-sistema-de-animaciones)
+- [Mecánicas implementadas](#-mecánicas-implementadas)
 - [Roadmap](#-roadmap)
 - [Contacto](#-contacto)
 
@@ -33,7 +35,7 @@
 
 ## 🎮 Sobre el proyecto
 
-Recreación del icónico Super Mario Bros desarrollada con **Phaser 3**, el framework de juegos 2D más popular para la web. El proyecto implementa física arcade, sprites animados, scroll de cámara, colisiones, música y una mecánica de muerte con reinicio automático, todo desde cero con JavaScript modular.
+Recreación del icónico Super Mario Bros desarrollada con **Phaser 3**, el framework de juegos 2D más popular para la web. El proyecto está construido con una **arquitectura totalmente modular**: cada sistema del juego (controles, audio, sprites, tilemap, enemigos) vive en su propio módulo JS, haciendo el código limpio, escalable y fácil de mantener.
 
 > ⚠️ Este proyecto es solo educativo y sin fines comerciales. Mario Bros es propiedad intelectual de Nintendo.
 
@@ -43,20 +45,25 @@ Recreación del icónico Super Mario Bros desarrollada con **Phaser 3**, el fram
 
 - Mario corre y salta por un mundo de **2000px de ancho**
 - La cámara sigue al personaje con **scroll lateral automático**
-- Si Mario cae al vacío, se activa la **animación de muerte** y suena el _Game Over_
-- El juego se reinicia automáticamente luego de 7 segundos
-- Física arcade con **gravedad**, colisiones contra el suelo y límites de mundo
+- **Enemigos Goomba** que caminan y rebotan en bloques y tuberías
+- **Monedas** coleccionables con animación, sonido y puntuación flotante
+- **Hongo power-up** que hace crecer a Mario con animación de transformación
+- **Bloques `?`** que revelan monedas o hongos al golpearlos desde abajo
+- **Bloques de ladrillo** que Mario grande puede romper
+- **Sistema de daño**: Mario grande vuelve a pequeño al recibir daño; Mario pequeño muere
+- Si Mario cae al vacío, se activa la **animación de muerte** con música de Game Over
+- El juego se **reinicia automáticamente** luego de 7 segundos
 
 ---
 
 ## 🛠 Tech Stack
 
-| Tecnología          | Uso                                                      |
-| ------------------- | -------------------------------------------------------- |
-| **Phaser 3**        | Motor de juego 2D con física arcade y gestión de escenas |
-| **JavaScript ES6+** | Lógica del juego, módulos, arrow functions               |
-| **HTML5 Canvas**    | Renderizado del juego via Phaser                         |
-| **Web Audio API**   | Música y efectos de sonido a través de Phaser            |
+| Tecnología          | Uso                                                             |
+| ------------------- | --------------------------------------------------------------- |
+| **Phaser 3**        | Motor de juego 2D, física arcade, escenas, animaciones y cámara |
+| **JavaScript ES6+** | Módulos, arrow functions, destructuring, clases                 |
+| **HTML5 Canvas**    | Renderizado del juego vía Phaser                                |
+| **Web Audio API**   | Música y efectos de sonido a través de Phaser                   |
 
 ---
 
@@ -66,25 +73,74 @@ Recreación del icónico Super Mario Bros desarrollada con **Phaser 3**, el fram
 super-mario/
 ├── assets/
 │   ├── entities/
-│   │   └── mario.png           # Spritesheet de Mario (frames: idle, walk x3, death, jump)
+│   │   ├── mario.png            # Spritesheet de Mario pequeño
+│   │   ├── mario-grown.png      # Spritesheet de Mario grande
+│   │   ├── goomba.png           # Spritesheet del Goomba
+│   │   ├── coin.png             # Spritesheet de moneda animada
+│   │   └── mushroom.png        # Sprite del hongo power-up
 │   ├── scenery/
 │   │   └── overworld/
-│   │       ├── cloud1.png      # Nubes decorativas
-│   │       └── floorbricks.png # Suelo del nivel
+│   │       ├── cloud1.png
+│   │       ├── floorbricks.png
+│   │       ├── block.png
+│   │       ├── misteryBlock.png
+│   │       ├── emptyBlock.png
+│   │       ├── vertical-small-tube.png
+│   │       └── vertical-medium-tube.png
 │   └── sound/
 │       └── music/
-│           └── gameover.mp3    # Música de game over
-├── animations.js               # Definición de todas las animaciones de Mario
-├── game.js                     # Configuración de Phaser y ciclo del juego (preload/create/update)
-├── phaser.min.js               # Librería Phaser 3 (local)
-└── index.html                  # Entry point del juego
+│           ├── gameover.mp3
+│           ├── coin-pickup.mp3
+│           ├── stomp.mp3
+│           ├── powerup.mp3
+│           └── powerdown.mp3
+│
+├── Component/
+│   ├── controls.js              # Lógica de teclado (flechas + WASD)
+│   ├── enemies.js               # Creación y comportamiento de enemigos
+│   ├── imageSprite.js           # Carga de imágenes y fondos
+│   ├── sound.js                 # Carga y reproducción de audio
+│   └── sprintesheet.js          # Carga de spritesheets
+│
+├── Tilemap/
+│   ├── overworldbg.js           # Fondo decorativo del overworld
+│   ├── floor-overworl.js        # Suelo estático del nivel
+│   └── blocks-overworl.js       # Bloques interactivos (?, ladrillos, tuberías)
+│
+├── animations.js                # Todas las animaciones del juego
+├── game.js                      # Configuración Phaser y ciclo preload/create/update
+├── phaser.min.js                # Librería Phaser 3 (local)
+└── index.html                   # Entry point
 ```
+
+---
+
+## 🧩 Arquitectura modular
+
+El juego está dividido en módulos independientes que se importan en `game.js`:
+
+```
+game.js
+├── Component/
+│   ├── controls.js     → checkControls(scene)
+│   ├── enemies.js      → enemies(scene, height)
+│   ├── imageSprite.js  → imageSprite(scene)
+│   ├── sound.js        → Audio(scene) / playSound(key, scene)
+│   └── sprintesheet.js → SpriteSheet(scene)
+├── Tilemap/
+│   ├── overworldbg.js  → overworldbg(scene)
+│   ├── floor-overworl.js → floorOverworld(scene, height)
+│   └── blocks-overworl.js → blocksOverworld(scene, height)
+└── animations.js       → createAnimations(scene)
+```
+
+Cada módulo recibe la instancia de la escena Phaser como argumento, manteniendo el código desacoplado y fácil de extender.
 
 ---
 
 ## 🏁 Primeros pasos
 
-No requiere ninguna instalación ni bundler. Solo un servidor local para evitar restricciones CORS con los assets.
+No requiere instalación ni bundler. Solo un servidor local para evitar restricciones CORS con los módulos ES6.
 
 ### Opción 1 — VS Code Live Server
 
@@ -92,13 +148,11 @@ No requiere ninguna instalación ni bundler. Solo un servidor local para evitar 
 2. Abrí el proyecto en VS Code
 3. Click derecho en `index.html` → **"Open with Live Server"**
 
-### Opción 2 — Python (cualquier sistema)
+### Opción 2 — Python
 
 ```bash
-# Python 3
 python -m http.server 8000
-
-# Luego abrí http://localhost:8000
+# Abrí http://localhost:8000
 ```
 
 ### Opción 3 — Node.js
@@ -113,43 +167,87 @@ npx serve .
 
 ## 🎮 Controles
 
-| Tecla                     | Acción                            |
-| ------------------------- | --------------------------------- |
-| `←` Flecha izquierda o A  | Mover a la izquierda              |
-| `→` Flecha derecha o D    | Mover a la derecha                |
-| `↑` Flecha arriba o SPACE | Saltar (solo si está en el suelo) |
+| Tecla               | Acción                            |
+| ------------------- | --------------------------------- |
+| `←` / `A`           | Mover a la izquierda              |
+| `→` / `D`           | Mover a la derecha                |
+| `↑` / `W` / `SPACE` | Saltar (solo si está en el suelo) |
 
 ---
 
 ## 🎨 Sistema de animaciones
 
-Las animaciones están definidas en `animations.js` como un módulo separado que recibe la instancia de la escena Phaser:
+Definidas en `animations.js`, reciben la instancia de la escena Phaser:
 
-| Clave         | Frames del spritesheet | Descripción     |
-| ------------- | ---------------------- | --------------- |
-| `mario-idle`  | Frame `0`              | Mario quieto    |
-| `mario-walk`  | Frames `1 → 3` (loop)  | Caminar, 12 fps |
-| `mario-jump`  | Frame `5`              | Salto           |
-| `mario-death` | Frame `4`              | Muerte          |
+| Clave              | Frames                       | Descripción             |
+| ------------------ | ---------------------------- | ----------------------- |
+| `mario-idle`       | Frame `0`                    | Mario pequeño quieto    |
+| `mario-walk`       | Frames `1 → 3` (loop, 12fps) | Mario pequeño caminando |
+| `mario-jump`       | Frame `5`                    | Mario pequeño saltando  |
+| `mario-death`      | Frame `4`                    | Mario muriendo          |
+| `mario-grown-idle` | Frame `0` (grown sheet)      | Mario grande quieto     |
+| `coin-idle`        | Frames animados (loop)       | Moneda girando          |
+| `goomba-walk`      | Frames loop                  | Goomba caminando        |
+| `goomba-death`     | Frame final                  | Goomba aplastado        |
 
-El spritesheet de Mario usa `frameWidth: 18px` × `frameHeight: 16px`.
+Spritesheet de Mario: `frameWidth: 18px` × `frameHeight: 16px`
+
+---
+
+## ⚙️ Mecánicas implementadas
+
+### 🍄 Power-up — Hongo
+
+Cuando Mario toca el hongo, el juego pausa brevemente, Mario parpadea entre su sprite normal y el grande, y luego se transforma. Su hitbox se actualiza a `18x32`.
+
+### ❓ Bloque misterioso — Moneda
+
+Al golpearlo desde abajo, el bloque sube y baja con un tween, aparece una moneda animada que sube y desaparece, se suma `+100` puntos con texto flotante, y el bloque se reemplaza por uno vacío.
+
+### ❓ Bloque misterioso — Hongo
+
+Igual que el anterior, pero aparece un hongo que sale del bloque con animación y luego camina por el nivel, rebotando en tuberías y bloques.
+
+### 🧱 Bloque de ladrillo
+
+Mario grande lo destruye al golpearlo desde abajo. Mario pequeño solo lo sacude.
+
+### 👾 Goomba
+
+- Camina hacia Mario automáticamente
+- Mario lo elimina saltando encima → `+200` puntos, sonido de pisotón
+- Si toca a Mario de costado: Mario grande se reduce, Mario pequeño muere
+
+### 💀 Muerte de Mario
+
+Se extrae a la función `killMario()` reutilizable. Desactiva colisiones, reproduce animación y música, lanza a Mario hacia arriba y reinicia la escena a los 7 segundos.
+
+### 💰 Puntuación flotante
+
+`addToScore(valor, origen, game)` genera un texto con fuente pixel que sube y se desvanece con tweens encadenados.
 
 ---
 
 ## 🗺 Roadmap
 
-- [x] Movimiento básico (izquierda / derecha / salto)
-- [x] Física arcade con gravedad
-- [x] Scroll de cámara siguiendo al personaje
-- [x] Animaciones (idle, walk, jump, death)
-- [x] Música de Game Over
-- [x] Sistema de muerte y reinicio
-- [ ] Enemigos (Goomba, Koopa)
-- [ ] Bloques interactivos (`?` y ladrillos)
-- [ ] Monedas y sistema de puntuación
-- [ ] Power-ups (hongo, estrella)
+- [x] Movimiento con flechas y WASD
+- [x] Física arcade con gravedad y colisiones
+- [x] Scroll de cámara siguiendo a Mario
+- [x] Animaciones (idle, walk, jump, death, grown)
+- [x] Enemigos Goomba con IA básica
+- [x] Monedas coleccionables con puntuación flotante
+- [x] Hongo power-up con transformación animada
+- [x] Bloques `?` con monedas y hongos
+- [x] Bloques de ladrillo rompibles
+- [x] Sistema de daño (Mario grande → pequeño → muerte)
+- [x] Efectos de sonido (moneda, pisotón, power-up, daño, game over)
+- [x] Arquitectura modular por componentes
+- [ ] HUD con puntuación, vidas y tiempo
+- [ ] Pantalla de inicio y Game Over
 - [ ] Múltiples niveles
-- [ ] Pantalla de inicio y HUD
+- [ ] Koopa Troopa
+- [ ] Bandera final de nivel
+- [ ] Guardado de puntaje máximo
 
 ---
 
